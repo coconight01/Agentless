@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from agentless.util.api_requests import create_chatgpt_config, request_chatgpt_engine
+from agentless.util.api_requests import create_chatgpt_config, request_chatgpt_engine, create_anthropic_config, request_anthropic_engine
 
 
 class DecoderBase(ABC):
@@ -52,6 +52,7 @@ class OpenAIChatDecoder(DecoderBase):
             model=self.name,
         )
         ret = request_chatgpt_engine(config, self.logger)
+        #ret = request_anthropic_engine(config, self.logger)
         if ret:
             responses = [choice.message.content for choice in ret.choices]
             completion_tokens = ret.usage.completion_tokens

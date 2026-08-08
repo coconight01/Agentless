@@ -138,6 +138,8 @@ from flask import Flask
 
 Please note that the *SEARCH/REPLACE* edit REQUIRES PROPER INDENTATION. If you would like to add the line '        print(x)', you must fully write that out, with all those spaces before the code!
 Wrap the *SEARCH/REPLACE* edit in blocks ```python...```.
+
+{past_text}
 """
 
 
@@ -239,8 +241,84 @@ def construct_topn_file_context(
     return topn_content, file_loc_intervals
 
 
+data_last_output_all_preds = []
+data_swe_bench_test_result = []
+data_resolved_ids = []
+def load_jsonl_last(args):
+    
+    with open(args.last_output_all_preds, 'r', encoding='utf-8') as f:
+        for line in f:
+            data_last_output_all_preds.append(json.loads(line.strip()))
+            
+    with open(args.swe_bench_test_result, 'r', encoding='utf-8') as f:
+        data_swe_bench_test_result = json.load(f)   
+    data_resolved_ids = data_swe_bench_test_result.get("resolved_ids", []) 
+
+# 根据 instance_id 查找 model_patch
+def check_last_info(target_instance_id):
+    if target_instance_id in data_resolved_ids :
+        print("true!!!")
+        return True, None
+    else :
+        print("not resolved:"+target_instance_id+"\n")
+        for item in data_last_output_all_preds:
+            if item.get('instance_id') == target_instance_id:
+                print("found!patch="+item.get('model_patch'))
+                return False, item.get('model_patch')
+        print("not found!\n")
+        return False, None
+
+def diff_to_custom_format(diff):
+    search_lines = []
+    replace_lines = []
+    in_search_block = False
+    in_replace_block = False
+    in_block = False
+    lines = diff.splitlines(True)  # 保留换行符
+    title=""
+    for i, line in enumerate(lines):
+        if line.startswith('---'):
+            title=line[6:]
+        if line.startswith('---') or line.startswith('+++') or line.startswith('@@'):
+            continue
+        if line.startswith('-') or line.startswith('+'):
+            in_block = True
+        elif in_block == True:
+            in_block= False
+            for j in range(i+1, len(lines)):
+                if lines[j].startswith('-') or lines[j].startswith('+'):
+                    in_block = True
+                    
+        if line.startswith('-'):
+            search_lines.append(line[1:])  # 去掉 `-` 号，保留内容和空格
+        elif line.startswith('+'):
+            replace_lines.append(line[1:])  # 去掉 `+` 号，保留内容和空格
+        else:
+            if in_block:
+                search_lines.append(line)
+                replace_lines.append(line)
+
+    # 如果最后还有未关闭的块，添加相应的结束标记
+    if in_search_block and not in_replace_block:
+        search_lines.append('>>>>>>> REPLACE\n')
+    elif in_replace_block and not in_search_block:
+        replace_lines.append('>>>>>>> REPLACE\n')
+
+    # 拼接搜索和替换块
+    search = ''.join(search_lines)
+    replace = ''.join(replace_lines)
+    # 最终结果
+    result = f"""
+### {title}<<<<<<< SEARCH
+{search}=======
+{replace}>>>>>>> REPLACE
+"""
+    return result
+
 def process_loc(loc, args, swe_bench_data, prev_o):
+    
     instance_id = loc["instance_id"]
+    last_resolved, last_model_patch = check_last_info(instance_id)
     log_file = os.path.join(
         args.output_folder, "localization_logs", f"{instance_id}.log"
     )
@@ -254,7 +332,11 @@ def process_loc(loc, args, swe_bench_data, prev_o):
     if found:
         logger.info(f"skipping {instance_id} since patch already generated")
         return None
-
+    
+    if last_resolved:
+        logger.info(f"skipping {instance_id} since patch already solved in the past")
+        return None       
+     
     logger.info(f"================ repairing {instance_id} ================")
     if len(loc["found_files"]) == 0:
         return {
@@ -336,10 +418,15 @@ def process_loc(loc, args, swe_bench_data, prev_o):
         else repair_prompt_combine_topn
     )
     file_instruction = repair_relevant_file_instruction
+    last_text_for_message=""
+    if last_model_patch!="" and last_model_patch is not None:
+        last_text_for_message = "the following is a failed!!! solution, please don't give me this :"+diff_to_custom_format(last_model_patch)+"\nplease help solve the question and don't!!! give me the above failed!!! solution! If your answer is the above, think again."
+        
     message = prompt_template.format(
         repair_relevant_file_instruction=file_instruction,
         problem_statement=problem_statement,
         content=topn_content.rstrip(),
+        past_text=last_text_for_message
     ).strip()
     logger.info(f"prompting with message:\n{message}")
 
@@ -679,11 +766,11 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        default="gpt-4o-2024-05-13",
+        default="deepseek-coder",
         choices=["gpt-4o-2024-05-13", "deepseek-coder", "gpt-4o-mini-2024-07-18"],
     )
     parser.add_argument(
-        "--backend", type=str, default="openai", choices=["openai", "deepseek"]
+        "--backend", type=str, default="deepseek", choices=["openai", "deepseek"]
     )
     parser.add_argument("--output_folder", type=str, required=True)
     parser.add_argument(
@@ -705,6 +792,17 @@ def main():
     parser.add_argument(
         "--mock", action="store_true", help="Mock run to compute prompt tokens."
     )
+    
+    
+    
+    
+    #!
+    parser.add_argument("--swe_bench_test_result", type=str, required=True)
+    parser.add_argument("--last_output_all_preds", type=str, required=True)
+    #!
+
+
+
 
     args = parser.parse_args()
 
@@ -731,6 +829,7 @@ def main():
             )
         post_process_repair(args)
     elif args.gen_and_process:
+        load_jsonl_last(args)
         repair(args)
         args.raw_output_file = args.output_file
         for i in range(args.max_samples):

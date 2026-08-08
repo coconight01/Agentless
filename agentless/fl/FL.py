@@ -480,6 +480,7 @@ Return just the locations.
         )
         self.logger.info(f"prompting with message:\n{message}")
         self.logger.info("=" * 80)
+        print(num_tokens_from_messages(message, self.model_name))
         assert num_tokens_from_messages(message, self.model_name) < MAX_CONTEXT_LENGTH
         if mock:
             self.logger.info("Skipping querying model since mock=True")
