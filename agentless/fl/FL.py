@@ -480,7 +480,16 @@ Return just the locations.
         )
         self.logger.info(f"prompting with message:\n{message}")
         self.logger.info("=" * 80)
-        assert num_tokens_from_messages(message, self.model_name) < MAX_CONTEXT_LENGTH
+        print(num_tokens_from_messages(message, self.model_name))
+        if num_tokens_from_messages(message, self.model_name) >= MAX_CONTEXT_LENGTH :
+            self.logger.info("Skipping querying model since message is too long!")
+            traj = {
+                "prompt": message,
+                "usage": {
+                    "prompt_tokens": num_tokens_from_messages(message, self.model_name),
+                },
+            }
+            return [], {"raw_output_loc": ""}, traj            
         if mock:
             self.logger.info("Skipping querying model since mock=True")
             traj = {

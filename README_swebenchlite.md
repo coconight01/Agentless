@@ -36,7 +36,7 @@ In localization, the goal is find the locations in source code where we need to 
 > 
 > Since for each issue in the benchmark we need to checkout the repository and process the files, you might want to save some time by downloading the preprocessed data here: [swebench_lite_repo_structure.zip](https://github.com/OpenAutoCoder/Agentless/releases/tag/v0.1.0)
 >
-> After downloading, please unzip and export the location as such `export PROJECT_FILE_LOC={folder which you saved}`
+> After downloading, please unzip and export the location as such `export PROJECT_FILE_LOC=/home/dyh/github_work/Agentless/repo_structures`
 
 Run the following command to generate the edit locations: 
 

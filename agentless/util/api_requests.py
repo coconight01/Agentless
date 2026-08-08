@@ -10,11 +10,6 @@ def num_tokens_from_messages(message, model="gpt-3.5-turbo-0301"):
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
-        encoding = tiktoken.get_encoding("cl100k_base")
-    if isinstance(message, list):
-        # use last message.
-        num_tokens = len(encoding.encode(message[0]["content"]))
-    else:
         num_tokens = len(encoding.encode(message))
     return num_tokens
 

@@ -139,6 +139,81 @@ from flask import Flask
 Please note that the *SEARCH/REPLACE* edit REQUIRES PROPER INDENTATION. If you would like to add the line '        print(x)', you must fully write that out, with all those spaces before the code!
 Wrap the *SEARCH/REPLACE* edit in blocks ```python...```.
 """
+repair_prompt_combine_topn_unix_diff = """
+We are currently solving the following issue within our repository. Here is the issue text:
+--- BEGIN ISSUE ---
+{problem_statement}
+--- END ISSUE ---
+
+{repair_relevant_file_instruction}
+--- BEGIN FILE ---
+```
+{content}
+```
+--- END FILE ---
+
+Please first localize the bug based on the issue statement, and then generate a *UNIX diff* to fix the issue.
+
+Every *UNIX diff* edit must use this format:
+1. The file path
+2. A unified diff format showing the changes between the original code and the corrected code
+3. The diff should indicate the line numbers in both the original and the modified code
+
+Here is an example:
+
+```python
+--- mathweb/flask/app.py
++++ mathweb/flask/app.py
+@@ -1,1 +1,2 @@
++import math
+from flask import Flask
+```
+
+Please note that the *UNIX diff* edit REQUIRES PROPER INDENTATION. If you would like to add the line '        print(x)', you must fully write that out, with all those spaces before the code!
+Wrap the *UNIX diff* edit in blocks ```python...```.
+"""
+
+repair_prompt_combine_topn_all_function = """
+We are currently solving the following issue within our repository. Here is the issue text:
+--- BEGIN ISSUE ---
+{problem_statement}
+--- END ISSUE ---
+
+{repair_relevant_file_instruction}
+--- BEGIN FILE ---
+```
+{content}
+```
+--- END FILE ---
+
+Please first localize the bug based on the issue statement, and then regenerate the *ENTIRE BUGGY FUNCTION* to fix the issue.
+
+Every regenerated *ENTIRE BUGGY FUNCTION* edit must use this format:
+1. The file path
+2. The start of the function block that needs to be replaced: <<<<<<< ORIGINAL FUNCTION
+3. The ENTIRE original function's code
+4. The dividing line: =======
+5. The ENTIRE new function's code
+6. The end of the function block: >>>>>>> REGENERATED FUNCTION
+
+Here is an example:
+
+```python
+### mathweb/flask/app.py
+<<<<<<< SEARCH
+def calculate_area(radius):
+    return 3.14 * radius * radius
+=======
+def calculate_area(radius):
+    import math
+    return math.pi * radius * radius
+>>>>>>> REPLACE
+
+```
+
+Please note that the *ENTIRE BUGGY FUNCTION* edit REQUIRES PROPER INDENTATION. If you would like to add the line '        print(x)', you must fully write that out, with all those spaces before the code!
+Wrap the *ENTIRE BUGGY FUNCTION* edit in blocks ```python...```.
+"""
 
 
 def _post_process_multifile_repair(
@@ -146,7 +221,8 @@ def _post_process_multifile_repair(
     file_contents: dict[str, str],
     logger,
     file_loc_intervals: dict[str, list],
-    diff_format=False,
+    diff_format=False
+    #entire_function=False
 ):
     edit_multifile_commands = extract_python_blocks(raw_output)
     edited_file = ""
@@ -171,6 +247,8 @@ def _post_process_multifile_repair(
             new_content = parse_diff_edit_commands(
                 edit_commands, content, file_loc_intervals[edited_file]
             )
+        # elif entire_function:
+        #     new_content = parse_entirefunc_edit_commands(edit_commands, content)
         else:
             new_content = parse_edit_commands(edit_commands, content)
     except Exception as e:
@@ -329,7 +407,8 @@ def process_loc(loc, args, swe_bench_data, prev_o):
         }
 
     prompt_template = (
-        repair_prompt_combine_topn_cot_diff
+        #repair_prompt_combine_topn_cot_diff
+        repair_prompt_combine_topn_all_function
         if args.cot and args.diff_format
         else repair_prompt_combine_topn_cot
         if args.cot
@@ -679,11 +758,11 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        default="gpt-4o-2024-05-13",
+        default="deepseek-coder",
         choices=["gpt-4o-2024-05-13", "deepseek-coder", "gpt-4o-mini-2024-07-18"],
     )
     parser.add_argument(
-        "--backend", type=str, default="openai", choices=["openai", "deepseek"]
+        "--backend", type=str, default="deepseek", choices=["openai", "deepseek"]
     )
     parser.add_argument("--output_folder", type=str, required=True)
     parser.add_argument(
