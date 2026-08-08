@@ -11,8 +11,8 @@ from agentless.util.preprocess_data import (
     show_project_structure,
 )
 
-MAX_CONTEXT_LENGTH = 128000
-
+#MAX_CONTEXT_LENGTH = 128000
+MAX_CONTEXT_LENGTH =  131072
 
 class FL(ABC):
     def __init__(self, instance_id, structure, problem_statement, **kwargs):
@@ -480,7 +480,20 @@ Return just the locations.
         )
         self.logger.info(f"prompting with message:\n{message}")
         self.logger.info("=" * 80)
-        assert num_tokens_from_messages(message, self.model_name) < MAX_CONTEXT_LENGTH
+        #assert num_tokens_from_messages(message, self.model_name) < MAX_CONTEXT_LENGTH
+        print(num_tokens_from_messages(message, self.model_name) )
+        if num_tokens_from_messages(message, self.model_name) >= 101079: #MAX_CONTEXT_LENGTH :
+            self.logger.info("Skipping querying model since message is too long!")
+            traj = {
+                "prompt": message,
+                "usage": {
+                    "prompt_tokens": num_tokens_from_messages(message, self.model_name),
+                },
+            }
+            return [], {"raw_output_loc": ""}, traj         
+        
+        
+        
         if mock:
             self.logger.info("Skipping querying model since mock=True")
             traj = {

@@ -218,14 +218,21 @@ def localize(args):
 def merge(args):
     """Merge predicted locations."""
     start_file_locs = load_jsonl(args.start_file)
-
     # Dump each location sample.
+    for locs in start_file_locs:
+        if len(locs["found_edit_locs"])!=4:
+           print("instance_id: ",locs['instance_id']) 
+           print(len(locs["found_edit_locs"]))
     for st_id in range(args.num_samples):
         en_id = st_id
         merged_locs = []
         for locs in start_file_locs:
             merged_found_locs = []
             if "found_edit_locs" in locs and len(locs["found_edit_locs"]):
+                # if st_id >= len(locs["found_edit_locs"]):
+                #     print("st_id: ",st_id)
+                #     print("len: ", len(locs["found_edit_locs"]))
+                #     print("instance_id: ",locs['instance_id'])
                 merged_found_locs = [
                     "\n".join(x) for x in locs["found_edit_locs"][st_id]
                 ]

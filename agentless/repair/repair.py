@@ -139,6 +139,222 @@ from flask import Flask
 Please note that the *SEARCH/REPLACE* edit REQUIRES PROPER INDENTATION. If you would like to add the line '        print(x)', you must fully write that out, with all those spaces before the code!
 Wrap the *SEARCH/REPLACE* edit in blocks ```python...```.
 """
+#4. Please note that modifications may involve more than one file. Ensure that each diff is represented with its correct path.
+repair_prompt_combine_topn_unix_diff = """
+We are currently solving the following issue within our repository. Here is the issue text:
+--- BEGIN ISSUE ---
+{problem_statement}
+--- END ISSUE ---
+
+{repair_relevant_file_instruction}
+--- BEGIN FILE ---
+```
+{content}
+```
+--- END FILE ---
+
+Please first localize the bug based on the issue statement, and then generate a *UNIX diff* to fix the issue.
+
+Every *UNIX diff* edit must use this format:
+1. The file path
+--- indicates the original file path.
++++ indicates the modified file path.
+2.The line numbers between the @@ symbols indicate where the changes occur in both the original and modified files.
+3.use unix diff format to show the changes between the original code and the corrected code: 
+Lines starting with - represent code that should be removed from the original file.
+Lines starting with + represent code that should be added to the modified file.
+Lines that remain unchanged will not have any prefix.
+
+
+Here is an example:
+
+```python
+--- mathweb/flask/app.py
++++ mathweb/flask/app.py
+@@ -1,1 +1,2 @@
++import math
+from flask import Flask
+```
+
+Please note that the *UNIX diff* edit REQUIRES PROPER INDENTATION. If you would like to add the line '        print(x)', you must fully write that out, with all those spaces before the code!
+Wrap the *UNIX diff* edit in blocks ```python...```.
+Do not add code unrelated to bug fixes.
+"""
+
+repair_prompt_combine_topn_all_function = """
+We are currently solving the following issue within our repository. Here is the issue text:
+--- BEGIN ISSUE ---
+{problem_statement}
+--- END ISSUE ---
+
+{repair_relevant_file_instruction}
+--- BEGIN FILE ---
+```
+{content}
+```
+--- END FILE ---
+
+Please first localize the bug based on the issue statement, and then regenerate the *ENTIRE BUGGY FUNCTION* to fix the issue.
+
+Every regenerated *ENTIRE BUGGY FUNCTION* edit must use this format:
+1. The file path
+2. The start of the function block that needs to be replaced: <<<<<<< SEARCH
+3. The ENTIRE original function's code
+4. The dividing line: =======
+5. The ENTIRE new function's code
+6. The end of the function block: >>>>>>> REPLACE
+
+Here is an example:
+
+```python
+### mathweb/flask/app.py
+<<<<<<< SEARCH
+def calculate_area(radius):
+    return 3.14 * radius * radius
+=======
+def calculate_area(radius):
+    import math
+    return math.pi * radius * radius
+>>>>>>> REPLACE
+
+```
+
+Please note that the *ENTIRE BUGGY FUNCTION* edit REQUIRES PROPER INDENTATION. If you would like to add the line '        print(x)', you must fully write that out, with all those spaces before the code!
+Wrap the *ENTIRE BUGGY FUNCTION* edit in blocks ```python...```.
+"""
+
+
+
+
+repair_prompt_combine_topn_cot_diff_2_examples = """
+We are currently solving the following issue within our repository. Here is the issue text:
+--- BEGIN ISSUE ---
+{problem_statement}
+--- END ISSUE ---
+
+{repair_relevant_file_instruction}
+--- BEGIN FILE ---
+```
+{content}
+```
+--- END FILE ---
+
+Please first localize the bug based on the issue statement, and then generate *SEARCH/REPLACE* edits to fix the issue.
+
+Every *SEARCH/REPLACE* edit must use this format:
+1. The file path
+2. The start of search block: <<<<<<< SEARCH
+3. A contiguous chunk of lines to search for in the existing source code
+4. The dividing line: =======
+5. The lines to replace into the source code
+6. The end of the replace block: >>>>>>> REPLACE
+
+Here are two examples:
+
+**Example 1**:
+
+```python
+### mathweb/flask/app.py
+<<<<<<< SEARCH
+from flask import Flask
+=======
+import math
+from flask import Flask
+>>>>>>> REPLACE
+```
+
+**Example 2**:
+
+```python
+### server/auth.py
+<<<<<<< SEARCH
+        if client.is_authenticated:
+            return "Authentication successful"
+=======
+        if client.is_authenticated:
+            log_action("Client authentication successful.")
+            if client.has_permission("admin"):
+                return "Admin authentication successful"
+            else:
+                return "User authentication successful"
+>>>>>>> REPLACE
+```
+
+Please note that the *SEARCH/REPLACE* edit REQUIRES PROPER INDENTATION. If you would like to add the line '        print(x)', you must FULLY write that out, with ALL those spaces before the code!
+Wrap the *SEARCH/REPLACE* edit in blocks ```python...```.
+"""
+
+repair_prompt_combine_topn_all_function_two_examples = """
+We are currently solving the following issue within our repository. Here is the issue text:
+--- BEGIN ISSUE ---
+{problem_statement}
+--- END ISSUE ---
+
+{repair_relevant_file_instruction}
+--- BEGIN FILE ---
+```
+{content}
+```
+--- END FILE ---
+
+Please first localize the bug based on the issue statement, and then regenerate the *ENTIRE BUGGY FUNCTION* to fix the issue.
+
+Every regenerated *ENTIRE BUGGY FUNCTION* edit must use this format:
+1. The file path
+2. The start of the function block that needs to be replaced: <<<<<<< SEARCH
+3. The ENTIRE original function's code
+4. The dividing line: =======
+5. The ENTIRE new function's code
+6. The end of the function block: >>>>>>> REPLACE
+
+Here are two examples:
+
+**Example 1**:
+
+```python
+### mathweb/flask/app.py
+<<<<<<< SEARCH
+def calculate_area(radius):
+    return 3.14 * radius * radius
+=======
+def calculate_area(radius):
+    import math
+    return math.pi * radius * radius
+>>>>>>> REPLACE
+```
+
+**Example 2**:
+
+```python
+### auth/user_auth.py
+<<<<<<< SEARCH
+def authenticate_user(user, password):
+    if user.password == password:
+        return "Authentication successful"
+    else:
+        return "Authentication failed"
+=======
+def authenticate_user(user, password):
+    if user.is_locked:
+        return "User account is locked"
+    if user.password == password:
+        return "Authentication successful"
+    else:
+        return "Authentication failed"
+>>>>>>> REPLACE
+```
+
+Please note that the *ENTIRE BUGGY FUNCTION* edit REQUIRES PROPER INDENTATION. If you would like to add the line '        print(x)', you must fully write that out, with all those spaces before the code!
+Wrap the *ENTIRE BUGGY FUNCTION* edit in blocks ```python...```.
+"""
+
+
+# Important Notes:
+
+# The *SEARCH/REPLACE* edit REQUIRES PROPER INDENTATION. For example, if you would like to add the line '        print(x)', you must fully write that out, ensure all 8 spaces are present before the code. 
+# Ensure that every modified line has correct spacing and indentation, especially for nested structures such as loops or conditionals.
+# If an edit affects multiple locations, each must be clearly and separately stated.
+
 
 
 def _post_process_multifile_repair(
@@ -152,8 +368,9 @@ def _post_process_multifile_repair(
     edited_file = ""
     new_content = ""
     try:
+        
         file_to_commands = split_edit_multifile_commands(
-            edit_multifile_commands, diff_format=diff_format
+            edit_multifile_commands, diff_format=diff_format,original_unix_diff=False
         )
         logger.info("=== file_to_commands: ===")
         logger.info(json.dumps(file_to_commands, indent=2))
@@ -329,7 +546,11 @@ def process_loc(loc, args, swe_bench_data, prev_o):
         }
 
     prompt_template = (
-        repair_prompt_combine_topn_cot_diff
+        repair_prompt_combine_topn_all_function_two_examples
+        #repair_prompt_combine_topn_cot_diff_2_examples
+        #repair_prompt_combine_topn_unix_diff
+        #repair_prompt_combine_topn_cot_diff
+        #repair_prompt_combine_topn_all_function
         if args.cot and args.diff_format
         else repair_prompt_combine_topn_cot
         if args.cot

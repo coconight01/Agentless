@@ -426,11 +426,60 @@ def overlap(subcommand1, subcommand2):
     )
     return not (end1 < start2 or end2 < start1)
 
+def unix_diff_to_search_replace(diff):
+    search_lines = []
+    replace_lines = []
+    in_block = False
+    lines = diff.splitlines(True)  # 保留换行符
+    title=""
+    for i, line in enumerate(lines):
 
-def split_edit_multifile_commands(commands, diff_format=False) -> dict[str, str]:
+        if line.startswith('---') or line.startswith('+++'):
+            if title=="":
+                title = line[4:].rstrip()   
+            elif title.rstrip() != line[4:].rstrip():
+                return None,None
+        if line.startswith('---') or line.startswith('+++') or line.startswith('@@'):
+            continue
+
+        if line.startswith('-') or line.startswith('+'):
+            in_block = True
+        elif in_block == True:
+            in_block= False
+            for j in range(i, len(lines)):
+                if '```' not in lines[j]:
+                    if lines[j].startswith('-') or lines[j].startswith('+') or lines[j].strip()!='':
+                        in_block = True
+                    
+        if line.startswith('-'):
+            search_lines.append(line[1:])  # 去掉 `-` 号，保留内容和空格
+        elif line.startswith('+'):
+            replace_lines.append(line[1:])  # 去掉 `+` 号，保留内容和空格
+        else:
+            if in_block:
+                if (len(line) - len(line.lstrip(' ')))%4==1:
+                    search_lines.append(line[1:])
+                    replace_lines.append(line[1:])  
+                else:                  
+                    search_lines.append(line)
+                    replace_lines.append(line)
+
+    # 拼接搜索和替换块
+    search = ''.join(search_lines)
+    replace = ''.join(replace_lines)
+    # 最终结果
+    result = f"""<<<<<<< SEARCH
+{search}
+=======
+{replace}
+>>>>>>> REPLACE
+"""
+    return title,result
+
+def split_edit_multifile_commands(commands, diff_format=False, original_unix_diff=False) -> dict[str, str]:
     """Split commands based on edited files."""
     file_to_commands = OrderedDict()
-    if diff_format:
+    if diff_format and original_unix_diff == False:
         for command in commands:
             file_name = None
             for subcommand in command.split(">>>>>>> REPLACE")[:-1]:
@@ -454,6 +503,25 @@ def split_edit_multifile_commands(commands, diff_format=False) -> dict[str, str]
                     or converted_command not in file_to_commands[file_name]
                 ):
                     file_to_commands.setdefault(file_name, []).append(converted_command)
+    elif original_unix_diff:
+        current_file = None
+        for command in commands:
+            file_name = None
+            for subcommand in command.split("--- ")[1:]:
+                subcommand = "--- " + subcommand
+                subcommand = subcommand.strip()    
+            
+                fn, converted_command = unix_diff_to_search_replace(subcommand)
+                if fn:
+                    file_name = "'" + fn + "'"                         
+                else:
+                    continue  
+                    
+                if (
+                    file_name not in file_to_commands
+                    or converted_command not in file_to_commands[file_name]
+                ):
+                    file_to_commands.setdefault(file_name, []).append(converted_command)  
     else:
         for command in commands:
             for subcommand in command.split("edit_file(")[1:]:

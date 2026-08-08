@@ -148,6 +148,7 @@ def majority_voting(args):
                     vote = Counter()
                     first_appear_idx = dict()
                     valid_indices = []
+
                     for i in range(len(execution_results[instance_id])):
                         sample = get_sample(instance_id, i)
                         patch_key = sample["normalized_patch"]
@@ -156,19 +157,27 @@ def majority_voting(args):
                             vote[patch_key] += 1
                             if patch_key not in first_appear_idx:
                                 first_appear_idx[patch_key] = i
-                    maj_selected_id = max(
-                        valid_indices,
-                        key=lambda i: (
-                            vote[patch_keys[i]],
-                            -first_appear_idx[patch_keys[i]],
-                        ),
-                    )
-                    patch = get_sample(instance_id, maj_selected_id)["patch"]
-                    result = {
-                        "model_name_or_path": "agentless",
-                        "instance_id": instance_id,
-                        "model_patch": patch,
-                    }
+                    if len(valid_indices)>0:
+                        maj_selected_id = max(
+                            valid_indices,
+                            key=lambda i: (
+                                vote[patch_keys[i]],
+                                -first_appear_idx[patch_keys[i]],
+                            ),
+                        )
+                        patch = get_sample(instance_id, maj_selected_id)["patch"]
+                        result = {
+                            "model_name_or_path": "agentless",
+                            "instance_id": instance_id,
+                            "model_patch": patch,
+                        }
+                    else:
+                        print(f"No len(len(valid_indices)[instance_id]) valid for {instance_id}")
+                        result = {
+                            "model_name_or_path": "agentless",
+                            "instance_id": instance_id,
+                            "model_patch": "",
+                        }                        
                 else:
                     print(f"No raw patches valid for {instance_id}")
                     result = {
